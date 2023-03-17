@@ -136,6 +136,15 @@ void wattperdays(void){
   Serial.println();
 }
 
+void arReset(void)
+{
+  wdt_enable(WDTO_15MS);
+  while (1)
+  {
+  }
+}
+
+
 void read_wind_speed(){
   if(power > 10.0){
     voltagesensor = analogRead(WIND_PIN);
@@ -243,10 +252,7 @@ void requestEvent(){
 
     Serial.println("Send sensors data success..");
   }else{
-    Wire.write(byte(SYN));
-    Wire.write(byte(SYN));
-    Wire.write(byte(STX));
-    Wire.write(byte(0));
+    arReset();
   }
 
   request_type = 0;
