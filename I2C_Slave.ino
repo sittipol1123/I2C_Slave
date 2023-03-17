@@ -6,6 +6,7 @@
 
 #include <PZEM004Tv30.h>
 #include <Wire.h>
+#include <avr/wdt.h>
 
 //D1, D2 use to i2c address
 #define I2C_ADDRESS 0x08
@@ -136,11 +137,15 @@ void wattperdays(void){
 }
 
 void read_wind_speed(){
-  voltagesensor = analogRead(WIND_PIN);
-  vout = (voltagesensor/1024)*vcc;
-  vin = vout * factor;
-  wind_speed = (vin - 0.7) * 1.63;
-  if(wind_speed < 0){
+  if(power > 10.0){
+    voltagesensor = analogRead(WIND_PIN);
+    vout = (voltagesensor/1024)*vcc;
+    vin = vout * factor;
+    wind_speed = (vin - 0.7) * 1.63;
+//    if(wind_speed < 0){
+//      wind_speed = 0.0;
+//    }
+  }else{
     wind_speed = 0.0;
   }
   Serial.println(wind_speed);
@@ -161,6 +166,7 @@ void receiveEvent(int howMany) {
   Serial.print("Got message from I2C master: ");
   Serial.println(howMany);
   int header = 0;
+  wdt_enable(WDTO_15MS);
   while (Wire.available()) {
     char c = Wire.read();
     if(header == 0 && c == SYN){
@@ -249,9 +255,12 @@ void requestEvent(){
 void check_condition(void){
    if(power > 10.0){
      if(voltage > 250.0){
-      command_type = 1;
+        command_type = 1;
+     }else if(wind_speed < 3.4 && power < 100.0){
+        command_type = 2;
+     }else {
+        command_type = 0;
      }
-     command_type = 0;
    }
 }
 
@@ -260,6 +269,13 @@ void setup() {
   Wire.begin(I2C_ADDRESS);
   Wire.onRequest(requestEvent);
   Wire.onReceive(receiveEvent);
+  Serial.println("Sensor is running");
+  Serial.print("Buard rate : ");
+  Serial.println(Serial_BAUDRATE);
+  Serial.print("Debug Mode : ");
+  Serial.println(SERIAL_DEBUG);
+  Serial.print("I2C Address : ");
+  Serial.println(I2C_ADDRESS);
 }
 
 void loop() {
